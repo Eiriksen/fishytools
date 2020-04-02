@@ -2,10 +2,7 @@
 % Please edit documentation in R/script - base tools.R
 \name{lookup}
 \alias{lookup}
-\title{Look up individual-associated data from one dataset and insert into
-#'
-Similar to merge(), but more flexible (and slower). Supports renaming of columns and overwrite-controll
-Returns the "to" dataframe with new columns from "from" added}
+\title{Look up individual-associated data from one dataset and insert into another.}
 \usage{
 lookup(to, from, what, by, by.x, by.y, new_name, default = NA, overwrite = F)
 }
@@ -29,10 +26,8 @@ lookup(to, from, what, by, by.x, by.y, new_name, default = NA, overwrite = F)
 \item{overwrite}{If there is already a value in x where one is to be inserted from y, use this to specify if it should be overwritten or not}
 }
 \description{
-Look up individual-associated data from one dataset and insert into
-#'
-Similar to merge(), but more flexible (and slower). Supports renaming of columns and overwrite-controll
-Returns the "to" dataframe with new columns from "from" added
+Similar to merge(), but more flexible (and slower). Supports renaming of columns and overwrite-controll.
+Returns the "to" dataframe with new columns from "from" added.
 }
 \examples{
 all_people = lookup(to=all_people, from=phone_book, what=c("phone_number","adress"), new_name=("mobile", ""), by="name", by.x="Name", default="not found")

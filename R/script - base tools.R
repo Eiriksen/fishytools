@@ -221,10 +221,10 @@ manipulate = function(df, column, fun){
 
 
 
-#' Look up individual-associated data from one dataset and insert into
-#' #'
-#' Similar to merge(), but more flexible (and slower). Supports renaming of columns and overwrite-controll
-#' Returns the "to" dataframe with new columns from "from" added
+#' Look up individual-associated data from one dataset and insert into another.
+#'
+#' Similar to merge(), but more flexible (and slower). Supports renaming of columns and overwrite-controll.
+#' Returns the "to" dataframe with new columns from "from" added.
 #'
 #' @param to A data frame (x) you want to add data from another set into
 #' @param from The data (y) frame you want to obtain this data from

@@ -116,7 +116,7 @@ unSelect = function(df,...){
 #' @param value the value that is looked up and added to df_samples
 #' @example fishies <- fishies %>% lookup(df_birthdays, "fish_ID", "date_birth")
 #' @export
-lookup = function(df_samples, df_lookup, id_column, value_column,default=NA,overwrite=T){
+lookup_olde = function(df_samples, df_lookup, id_column, value_column,default=NA,overwrite=T){
   message("Looking up ",value_column," using ",id_column,"...")
   #check if the df_samples already has a column with /value/
   #if not, create one and fill it with NA
@@ -218,21 +218,52 @@ manipulate = function(df, column, fun){
   return(df)
 }
 
-# ready to test, I think?
-inject = function(to, from, what, by, by.x, by.y, new_name, default=NA, overwrite=F){
+
+
+
+#' Look up individual-associated data from one dataset and insert into
+#' #'
+#' Similar to merge(), but more flexible (and slower). Supports renaming of columns and overwrite-controll
+#' Returns the "to" dataframe with new columns from "from" added
+#'
+#' @param to A data frame (x) you want to add data from another set into
+#' @param from The data (y) frame you want to obtain this data from
+#' @param what Which columns from y to look up into x. Single chr value or vector with multiple values. Will take all columns from y if unspecified.
+#' @param by Which column to use for identifying individuals. The function only adds data to columns with matching identifiers.
+#' @param by.x If the identifier has a different column name in the "to" dataset, specify it with by.x
+#' @param by.y If the identifier has a different column name in the "from" dataset, specify it with by.y
+#' @param new_name If you want to rename some columns from y before inserting into x. Must be same length as "what". Use an empty "" for columns to stay the same.
+#' @param default If inserted columns doesn't exist yet in x, use this to specify the default value in case some rows can't be looked up
+#' @param overwrite If there is already a value in x where one is to be inserted from y, use this to specify if it should be overwritten or not
+#' @export
+#' @examples all_people = lookup(to=all_people, from=phone_book, what=c("phone_number","adress"), new_name=("mobile", ""), by="name", by.x="Name", default="not found")
+lookup = function(to, from, what, by, by.x, by.y, new_name, default=NA, overwrite=F){
 
   df_x    <- to
   df_y    <- from
-  columns <- what
-
   if (missing(by.x)) by.x = by
   if (missing(by.y)) by.y = by
-  if (!missing(new_name) & length(new_name) != length(columns)) error("'new_name' and 'what' must be of same length if 'new_name' is used")
-  if (missing(new_name)) new_name = what
+
+  # if "what" is not defined, make it all the columns in Y (from) except the by column
+  if(missing(what)) what=names(from)[!names(from) %in% by.y]
+  print(what)
+  columns <- what
+
+
+  if (!missing(new_name)) if (length(new_name) != length(columns)) stop("'new_name' and 'what' must be of same length if 'new_name' is used")
+
+  if (missing(new_name)) new_name = columns
+  else
+  {
+    for (i in 1:length(new_name))
+    {
+      if (new_name[i]=="") new_name[i]=columns[i]
+    }
+  }
 
   # columns_n are the columns where to checkup values go
-  columns_n <- newname
-  columns_o <- what
+  columns_n <- new_name
+  columns_o <- columns
 
   # first do a column check, create those that doesn't exist
   for (i in 1:length(columns_n))
@@ -244,23 +275,25 @@ inject = function(to, from, what, by, by.x, by.y, new_name, default=NA, overwrit
   }
 
   # iterate over all rows in x
-  for (r in nrow(df_x))
+  for (r in 1:nrow(df_x))
   {
     # currently in a row r
     # check if by.x of this rows matches by.y of any row in y
-    rows_y = df_y[df_y[[by.y]] == df_x[[by.x]][r]]
+
+    rows_y = df_y[df_y[[by.y]] == df_x[[by.x]][r],]
     if (nrow(rows_y) != 0)
     {
+
       # a match was found!
       # Iterate over all columns_o in y and assign them to column_n in x
-      for (clm in 1:length(column_o) )
+      for (clm in 1:length(columns_o) )
       {
         # currently looking at column clm
         # put in df_x, at this column, at the current row, the corresponding value in the matching rows in y
         # but only if overwrite is turned on, or the value in x is NA
-        if (overwrite == T || !is.na(df_x[[columns_n[clm]]][r]))
+        if (overwrite == T || is.na(df_x[[columns_n[clm]]][r]))
         {
-          df_x[[columns_n[clm]]][r] = rows_y[[column_o[clm]]][1]
+          df_x[[columns_n[clm]]][r] = rows_y[[columns_o[clm]]][1]
         }
       }
 
@@ -271,9 +304,14 @@ inject = function(to, from, what, by, by.x, by.y, new_name, default=NA, overwrit
     # check if its by.x matches any by.y
       # if so, take the values from y (depending on setting of overwrite)
       # if not, leave be
-
+return(df_x)
 
 }
+
+
+
+
+
 
 
 #' perform

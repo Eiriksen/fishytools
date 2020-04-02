@@ -180,7 +180,7 @@ renameGenotype = function(dataframe, column, LUT=c("1"="1 1","2"="1 2","3"="2 2"
 }
 
 
-clean_genotypes = function(df) {
+snps_clean_freqNA = function(df) {
 
   message(glue("dataframe starting at {ncol(df)} columns."))
 

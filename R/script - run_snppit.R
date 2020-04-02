@@ -1,23 +1,23 @@
 #' Parentage analysis (using SNPPT.exe)
 #' #'
 #' Function that simplifies using SNPPT.exe to calculate parentage based on SNP data
-#' Requires that snppt.exe is installed in the working directory!
+#' Requires that snppt.exe is installed in the working directory of this file!
 #' More info at: https://swfsc.noaa.gov/textblock.aspx?Division=FED&ParentMenuId=54&id=16021
 #'
 #' Download snppit here: https://github.com/eriqande/snppit
 #' Extract the zip-file, rename the "snppit-master" folder to "snppit", and place the folder in the same working directory as this script.
 #'
-#' Then you're ready! Usually, to run snppit, you need to prepare a specially formatted genpop file with offspring and parent data,
-#' then run snppit via the command line. This r function saves you some time by doing the formatting and command line stuff for you.
-#' All you need to do is to supply the function with a dataset of parents and offspring, and the function will return the resulting parentage analysis ready to use in R.
+#' Then you're ready! Usually, to run snppit, you need to prepare a specially formatted genpop file with your offspring and parent data SNP data,
+#' then run snppit via the command line. This r function saves you some time by doing the genpop formatting and command line stuff for you, in R.
+#' All you need to do is to supply the function with two datasets: parents and offspring, and the function will return the resulting parentage analysis ready to use in R.
 #'
-#' The function takes two datasets, one for offspring and one for parents. \cr
+#' The function takes two datasets as parameters, one for offspring and one for parents. \cr
 #' Both datasets must be formated as folows:
 #' \itemize{
 #' \item Individuals as rows
-#' \item SNP data on columns, one column pr SNP. Important: any column that is not ID, (or for parents, sex or population), will be interpreted as a SNP.
+#' \item SNP data on columns, one column pr SNP. Important: any column that is not named "ID", (or for parents, "sex" or "population"), will be interpreted as a SNP.
 #' \item SNP genotype written numerically: 1=homozygous for allele a, 2=heterozygous, 3=homozygous for allele b
-#' \item One column named "ID" that contains some ID for each individual,
+#' \item One column named "ID" that contains some unique ID for each individual,
 #' \item Only for parents: One column named "sex" that's either "M" or "F"
 #' \item Only for parents: One column named "population" that gives that individual's population
 #' \item Only for parents: One column named "group" that gives the parents spawning group (foursome) must come after "sex"
@@ -27,16 +27,14 @@
 #' @param df_offspring Data frame contaning offspring ID's and SNP genotypes (see above)
 #' @param df_parents Data frame containing parent ID's, sex, population, and SNP genotypes (see above)
 #' @param projectName Optional. A name that will be used for files created during the proces
+#' @param overwrite Optional. If the script should overwrite any older snppit analysis (or read the old one again instead of re-doing it)
+#' @param useGroups Optional. If parent grups should be used, only parents within the same group will be considered as parents together.
 #' @export
 #' @examples parentage_data <- run_snppt(offspring, parents, "Project_oct2019")
-run_snppit <- function(df_offspring, df_parents, projectName="project1",overwrite=F, max_missing=0.5, useGroups=F){
+run_snppit <- function(df_offspring, df_parents, projectName="project1",overwrite=F, useGroups=F){
 
   oldwd = getwd()
   setwd(paste(oldwd,"/snppit",sep=""))
-
-  message(glue("Offspring starting at {nrow(df_offspring)} rows"))
-  df_offspring <- df_offspring %>% remoNA_row(max_missing)
-  message(glue("Offspring to be analyzed at {nrow(df_offspring)} rows after removing values with more than {max_missing*100}% values missing."))
 
   filename = glue("snppit_output_ParentageAssignments - {projectName}.csv")
 
@@ -108,7 +106,7 @@ run_snppit <- function(df_offspring, df_parents, projectName="project1",overwrit
 
 #' SNPPITfile
 #' @keywords internal
-SNPPITfile = function(name,parents, offspring,parentSex=T,parentPopulation=T,parentGroup=T){
+SNPPITfile = function(name,parents,offspring,parentSex=T,parentPopulation=T,parentGroup=T){
   # ASSUMES the following names for columns:
   # IDs:        "ID"         (string, no whitespace)
   # Sex:        "sex"        (F/M/?)
@@ -169,5 +167,72 @@ SNPPITfile = function(name,parents, offspring,parentSex=T,parentPopulation=T,par
   writeLines("OFFSPRING Offspring_pool ?",snppitFile)
   write.table(offspring, snppitFile, sep="\t", quote=F, row.names = F, col.names=F)
 
+  close(snppitFile)
+}
+
+
+
+#' SNPPITfile
+#' @keywords internal
+format.snpptFile = function(name,df_parents,df_offspring,parentSex=T,parentPopulation=T,parentGroup=T){
+  # ASSUMES the following names for columns:
+  # IDs:        "ID"         (string, no whitespace)
+  # Sex:        "sex"        (F/M/?)
+  # Population: "population" (string, no whitespace)
+  # Family:     "group"     number or string, as long as they're unique
+  # And no other columns other than loci!
+
+  # Initiate the text file
+  snppitFile = file(paste(name,".txt",sep=""), "w")
+  # Make a vector to contain all the lines in the text file
+  printLines = c()
+
+  # Create a list of loci - based on the column names in the parent dataset - then removing columns like ID, sex, population etc
+  loci = names(df_parents)
+  # clean non-snps from the loci list
+  loci = loci[! loci %in% c("ID", "population", "sex", "group")]
+
+  # Write POP_COLUMN_SEX
+  if ("sex" %in% names(df_parents))
+  {
+    printLines = c(printLines, "POPCOLUMN_SEX")
+  }
+
+  # Write POPCOLUMN_SPAWN_GROUP
+  if ("group" %in% names(df_parents))
+  {
+    printLines = c(printLines, "POPCOLUMN_SPAWN_GROUP")
+  }
+
+  # Write the number of loci.
+  # Write the MISSING_ALLELE specifyer (we're using *)
+  printLines = c(paste("NUMLOCI", length(loci)),"MISSING_ALLELE *", printLines)
+
+  # Write in the ist of all the loci
+  for( i in loci)
+  {
+    printLines = c(printLines, paste(i, "0.005"))
+  }
+
+  # Write the lines we have so far
+  writeLines(printLines, snppitFile)
+
+  if (! "population" %in% names(df_parents)) df_parents$population = "POP Parentpool_0"
+
+  # For each population:
+  for (i in unique(df_parents$population))
+  {
+    # Write the populatin name first
+    writeLines(paste("POP",i),snppitFile)
+    # Then write inn al the parents and their snps
+    write.table(df_parents[which(parents$population==i),] %>% select(-c("population")), snppitFile, sep="\t", quote=F, row.names = F, col.names=F)
+  }
+
+  # Write the offspring pool (all the same pool)
+  writeLines("OFFSPRING Offspring_pool ?",snppitFile)
+  # write inn al the offspring
+  write.table(df_offspring, snppitFile, sep="\t", quote=F, row.names = F, col.names=F)
+
+  # close/save the file
   close(snppitFile)
 }

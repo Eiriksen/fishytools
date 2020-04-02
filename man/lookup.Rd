@@ -2,26 +2,38 @@
 % Please edit documentation in R/script - base tools.R
 \name{lookup}
 \alias{lookup}
-\title{For looking up variables from one dataset and then add them to another one.}
+\title{Look up individual-associated data from one dataset and insert into
+#'
+Similar to merge(), but more flexible (and slower). Supports renaming of columns and overwrite-controll
+Returns the "to" dataframe with new columns from "from" added}
 \usage{
-lookup(
-  df_samples,
-  df_lookup,
-  id_column,
-  value_column,
-  default = NA,
-  overwrite = T
-)
+lookup(to, from, what, by, by.x, by.y, new_name, default = NA, overwrite = F)
 }
 \arguments{
-\item{df_samples}{samples to look up}
+\item{to}{A data frame (x) you want to add data from another set into}
 
-\item{df_lookup}{dataframe to look up against}
+\item{from}{The data (y) frame you want to obtain this data from}
 
-\item{id_column}{common column between the two sets containing unique identifiers for rows}
+\item{what}{Which columns from y to look up into x. Single chr value or vector with multiple values. Will take all columns from y if unspecified.}
 
-\item{value}{the value that is looked up and added to df_samples}
+\item{by}{Which column to use for identifying individuals. The function only adds data to columns with matching identifiers.}
+
+\item{by.x}{If the identifier has a different column name in the "to" dataset, specify it with by.x}
+
+\item{by.y}{If the identifier has a different column name in the "from" dataset, specify it with by.y}
+
+\item{new_name}{If you want to rename some columns from y before inserting into x. Must be same length as "what". Use an empty "" for columns to stay the same.}
+
+\item{default}{If inserted columns doesn't exist yet in x, use this to specify the default value in case some rows can't be looked up}
+
+\item{overwrite}{If there is already a value in x where one is to be inserted from y, use this to specify if it should be overwritten or not}
 }
 \description{
-Use to add a column (value) to a dataset (samples), from another dataset (lookup), based on an identifier that exists in both (id_lookup)
+Look up individual-associated data from one dataset and insert into
+#'
+Similar to merge(), but more flexible (and slower). Supports renaming of columns and overwrite-controll
+Returns the "to" dataframe with new columns from "from" added
+}
+\examples{
+all_people = lookup(to=all_people, from=phone_book, what=c("phone_number","adress"), new_name=("mobile", ""), by="name", by.x="Name", default="not found")
 }
